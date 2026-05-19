@@ -2,26 +2,66 @@ import { Request, Response } from "express";
 import { Poll } from "../schema/poll_schema";
 import { Nominee } from "../schema/nominee_schema";
 import { Types } from "mongoose";
+import { createPollSchema } from "../validations/poll.validation";
 
-export const createPoll = async (req: Request, res: Response) => {
-    try {
-        const { title, description, nominees, createdBy, } = req.body;
+export const createPoll =
+    async (
+        req: Request,
+        res: Response
+    ) => {
+        try {
+            const validatedData =
+                createPollSchema.parse(
+                    req.body
+                );
 
-        const poll = await Poll.create({ title, description, createdBy, });
+            const { title, description, nominees, createdBy } = validatedData;
 
-        const nomineeDocs = nominees.map((name: string) => ({
-            pollId: poll._id,
-            name,
-        }));
+            const validNominees =
+                nominees.filter(
+                    (nominee) =>
+                        nominee.trim() !== ""
+                );
 
-        await Nominee.insertMany(nomineeDocs);
+            const poll =
+                await Poll.create({
+                    title,
+                    description,
+                    createdBy,
+                });
 
-        res.status(201).json({ message: "Poll created", poll, });
+            const nomineeDocs =
+                validNominees.map(
+                    (nominee) => ({
+                        name: nominee,
+                        pollId: poll._id,
+                    })
+                );
 
-    } catch (error) {
-        res.status(500).json({ message: "Server error", });
-    }
-};
+            await Nominee.insertMany(
+                nomineeDocs
+            );
+
+            res.status(201).json({
+                message: "Poll created successfully",
+                poll,
+            });
+        } catch (error: any) {
+
+            if (
+                error?.name === "ZodError"
+            ) {
+                return res.status(400).json({
+                    message: "Validation failed",
+                    errors: error.flatten().fieldErrors,
+                });
+            }
+
+            res.status(500).json({
+                message: "Server error",
+            });
+        }
+    };
 
 export const getPolls = async (req: Request, res: Response) => {
     try {

@@ -51,7 +51,7 @@ const PollSchema = new Schema<IPoll>({
     maxNominees: {
         type: Number,
         default: 5,
-        min: 1,
+        min: 2,
         max: 5,
     },
 }, {
