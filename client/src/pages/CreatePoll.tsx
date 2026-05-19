@@ -186,7 +186,7 @@ const CreatePoll = () => {
               className={`rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
                 loading
                   ? "cursor-not-allowed bg-slate-400 shadow-none"
-                  : "bg-lene-to-r from-[#3178C6] to-[#6cb5f0] shadow-[#3178C6]/20 hover:from-[#245ea8] hover:to-[#4f9fe7]"
+                  : "bg-linear-to-r from-[#3178C6] to-[#6cb5f0] shadow-[#3178C6]/20 hover:from-[#245ea8] hover:to-[#4f9fe7]"
               }`}
             >
               {loading ? "Creating Poll..." : "Create Poll"}
