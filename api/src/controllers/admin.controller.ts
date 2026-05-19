@@ -3,34 +3,25 @@ import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt";
 import { Admin } from "../schema/admin_schema";
 
-export const loginAdmin = async (req: Request, res: Response
-) => {
+export const loginAdmin = async (req: Request, res: Response) => {
     try {
         const { username, password } = req.body;
 
-        console.log("1")
         const admin = await Admin.findOne({ username });
-        
+
         if (!admin) {
             return res.status(400).json({ message: "Admin not found", });
-            
         }
-        console.log("2", admin)
-        
+
         const isMatch = await bcrypt.compare(password, admin.password);
-        
+
         if (!isMatch) {
-            
             return res.status(400).json({ message: "Invalid credentials", });
-            
         }
-        
-        console.log("\n3", isMatch)
+
         const token = generateToken(admin._id.toString());
-       
-        res.json({
-            token,
-        });
+
+        res.json({ token, });
 
     } catch (error) {
         res.status(500).json({ message: "Server error", });

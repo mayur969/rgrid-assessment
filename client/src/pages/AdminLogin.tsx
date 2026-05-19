@@ -8,11 +8,16 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const loginAdmin = async () => {
     try {
-      const response = await api.post(apiEndpoints.auth.adminLogin, { username, password });
+      const response = await api.post(apiEndpoints.auth.adminLogin, {
+        username,
+        password,
+      });
       localStorage.setItem("adminToken", response.data.token);
       navigate("/admin/dashboard");
-    } catch (error) {
-      alert("Login failed");
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Login failed";
+
+      alert(message);
     }
   };
 
@@ -20,9 +25,15 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-[#3178C6]/10 via-white to-slate-100 px-4 py-10">
       <div className="w-full max-w-md rounded-4xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-900/10">
         <div className="mb-6 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#3178C6]">Administrator</p>
-          <h1 className="mt-4 text-3xl font-bold text-slate-900">Admin Login</h1>
-          <p className="mt-2 text-sm text-slate-500">Access the poll dashboard to manage candidates and view votes.</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#3178C6]">
+            Administrator
+          </p>
+          <h1 className="mt-4 text-3xl font-bold text-slate-900">
+            Admin Login
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Access the poll dashboard to manage candidates and view votes.
+          </p>
         </div>
         <input
           placeholder="Username"

@@ -49,34 +49,32 @@ export const votePoll = async (req: Request, res: Response) => {
       throw err;
     }
 
-    const [updatedPoll] =
-      await Promise.all([
-        Poll.findByIdAndUpdate(
-          pollId,
-          {
-            $inc: {
-              totalVotes: 1,
-            },
+    const [updatedPoll] = await Promise.all([
+      Poll.findByIdAndUpdate(
+        pollId,
+        {
+          $inc: {
+            totalVotes: 1,
           },
-          {
-            new: true,
-          }
-        ).select(
-          "totalVotes _id"
-        ),
+        },
+        {
+          new: true,
+        }
+      ).select(
+        "totalVotes _id"
+      ),
 
-        Nominee.findByIdAndUpdate(
-          nomineeId,
-          {
-            $inc: {
-              voteCount: 1,
-            },
-          }
-        ),
-      ]);
+      Nominee.findByIdAndUpdate(
+        nomineeId,
+        {
+          $inc: {
+            voteCount: 1,
+          },
+        }
+      ),
+    ]);
 
-    const nominees =
-      await Nominee.find({ pollId, }).select("_id name voteCount");
+    const nominees = await Nominee.find({ pollId, }).select("_id name voteCount");
 
     if (io) {
       io.emit("vote-updated", { pollId, totalVotes: updatedPoll?.totalVotes ?? 0, nominees, });
@@ -86,10 +84,11 @@ export const votePoll = async (req: Request, res: Response) => {
 
   } catch (error: any) {
 
-    if (
-      error instanceof z.ZodError
-    ) {
-      return res.status(400).json({ message: "Validation failed", errors: error.flatten().fieldErrors, });
+    
+    if (error instanceof z.ZodError) {
+      const flattened = z.flattenError(error);
+
+      return res.status(400).json({ message: "Validation failed", errors: flattened.fieldErrors, });
     }
 
     res.status(500).json({ message: "Server error", });

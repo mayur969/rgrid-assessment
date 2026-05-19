@@ -1,70 +1,66 @@
-import { useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useNavigate } from "react-router-dom";
+
 import api from "../services/ApiService";
 import { apiEndpoints } from "../constants/apiEndpoints";
+
+/**
+ * Validation Schema
+ */
+const createPollSchema = z.object({
+  title: z.string().trim().min(1, "Title is required"),
+
+  description: z.string(),
+
+  nominees: z
+    .array(
+      z.object({
+        value: z.string().trim().min(1, "Nominee name is required"),
+      }),
+    )
+    .min(2, "Minimum 2 nominees required")
+    .max(5, "Maximum 5 nominees allowed"),
+});
+
+type CreatePollFormData = z.infer<typeof createPollSchema>;
 
 const CreatePoll = () => {
   const navigate = useNavigate();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [nominees, setNominees] = useState(["", ""]);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({
-    title: "",
-    nominees: "",
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CreatePollFormData>({
+    resolver: zodResolver(createPollSchema),
+
+    defaultValues: {
+      title: "",
+
+      description: "",
+
+      nominees: [{ value: "" }, { value: "" }],
+    },
   });
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setNominees(["", ""]);
+  const { fields, append } = useFieldArray({ control, name: "nominees" });
 
-    setErrors({
-      title: "",
-      nominees: "",
-    });
-  };
-
-  const validateForm = () => {
-    const newErrors = {
-      title: "",
-      nominees: "",
-    };
-
-    const validNominees = nominees.filter((nominee) => nominee.trim() !== "");
-
-    if (!title.trim()) {
-      newErrors.title = "Title is required";
-    }
-
-    if (validNominees.length < 2) {
-      newErrors.nominees = "Minimum 2 nominees required";
-    }
-
-    setErrors(newErrors);
-
-    return !newErrors.title && !newErrors.nominees;
-  };
-
-  const createPoll = async () => {
-    const isValid = validateForm();
-
-    if (!isValid) return;
-
+  const onSubmit = async (data: CreatePollFormData) => {
     try {
-      setLoading(true);
-
       const token = localStorage.getItem("adminToken");
 
-      const validNominees = nominees.filter((nominee) => nominee.trim() !== "");
+      const nominees = data.nominees.map((nominee) => nominee.value.trim());
 
       await api.post(
         apiEndpoints.polls.createPoll,
         {
-          title: title.trim(),
-          description: description.trim(),
-          nominees: validNominees,
+          title: data.title.trim(),
+          description: data.description.trim(),
+          nominees,
           createdBy: "6834f53b9f42d8c4a8dfe111",
         },
         {
@@ -76,13 +72,13 @@ const CreatePoll = () => {
 
       alert("Poll created successfully!");
 
-      resetForm();
+      reset();
 
       navigate("/admin/dashboard");
-    } catch (error) {
-      alert("Failed to create poll. Please try again.");
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Failed to create poll";
+
+      alert(message);
     }
   };
 
@@ -109,89 +105,87 @@ const CreatePoll = () => {
             </p>
           </div>
 
-          <div className="flex flex-col gap-5">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-5"
+          >
+            {/* Title */}
             <div>
               <input
                 placeholder="Poll Title"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-[#3178C6] focus:ring focus:ring-[#3178C6]/20"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-
-                  if (e.target.value.trim()) {
-                    setErrors((prev) => ({ ...prev, title: "" }));
-                  }
-                }}
+                {...register("title")}
               />
 
               {errors.title && (
-                <p className="mt-2 text-sm text-red-500">{errors.title}</p>
+                <p className="mt-2 text-sm text-red-500">
+                  {errors.title.message}
+                </p>
               )}
             </div>
 
+            {/* Description */}
             <textarea
               placeholder="Description"
               className="min-h-35 w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-[#3178C6] focus:ring focus:ring-[#3178C6]/20"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register("description")}
             />
 
-            {nominees.map((nominee, index) => (
-              <input
-                key={index}
-                placeholder={`Nominee ${index + 1}`}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-[#3178C6] focus:ring focus:ring-[#3178C6]/20"
-                value={nominee}
-                onChange={(e) => {
-                  const updated = [...nominees];
+            {/* Nominees */}
+            {fields.map((field, index) => (
+              <div key={field.id}>
+                <input
+                  placeholder={`Nominee ${index + 1}`}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-[#3178C6] focus:ring focus:ring-[#3178C6]/20"
+                  {...register(`nominees.${index}.value`)}
+                />
 
-                  updated[index] = e.target.value;
-
-                  setNominees(updated);
-
-                  const validNominees = updated.filter((n) => n.trim() !== "");
-
-                  if (validNominees.length >= 2) {
-                    setErrors((prev) => ({ ...prev, nominees: "" }));
-                  }
-                }}
-              />
+                {errors.nominees?.[index]?.value && (
+                  <p className="mt-2 text-sm text-red-500">
+                    {errors.nominees?.[index]?.value?.message}
+                  </p>
+                )}
+              </div>
             ))}
 
-            {errors.nominees && (
-              <p className="text-sm text-red-500">{errors.nominees}</p>
+            {/* Array Errors */}
+            {typeof errors.nominees?.message === "string" && (
+              <p className="text-sm text-red-500">{errors.nominees.message}</p>
             )}
 
+            {/* Add Nominee */}
             <button
+              type="button"
               onClick={() => {
-                if (nominees.length >= 5) return;
+                if (fields.length >= 5) return;
 
-                setNominees([...nominees, ""]);
+                append({
+                  value: "",
+                });
               }}
-              disabled={nominees.length >= 5}
+              disabled={fields.length >= 5}
               className={`rounded-2xl border px-5 py-3 text-sm font-semibold transition ${
-                nominees.length >= 5
+                fields.length >= 5
                   ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400"
                   : "border-[#3178C6] text-[#3178C6] hover:bg-[#3178C6]/10"
               }`}
             >
-              {nominees.length >= 5
-                ? "Maximum 5 Nominees Added"
-                : "Add Nominee"}
+              {fields.length >= 5 ? "Maximum 5 Nominees Added" : "Add Nominee"}
             </button>
 
+            {/* Submit */}
             <button
-              onClick={createPoll}
-              disabled={loading}
+              type="submit"
+              disabled={isSubmitting}
               className={`rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
-                loading
+                isSubmitting
                   ? "cursor-not-allowed bg-slate-400 shadow-none"
                   : "bg-linear-to-r from-[#3178C6] to-[#6cb5f0] shadow-[#3178C6]/20 hover:from-[#245ea8] hover:to-[#4f9fe7]"
               }`}
             >
-              {loading ? "Creating Poll..." : "Create Poll"}
+              {isSubmitting ? "Creating Poll..." : "Create Poll"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>
