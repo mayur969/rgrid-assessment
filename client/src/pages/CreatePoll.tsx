@@ -1,30 +1,12 @@
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 
 import api from "../services/ApiService";
 import { apiEndpoints } from "../constants/apiEndpoints";
+import { createPollSchema, type CreatePollFormData } from "../validations/poll.validations";
 
-/**
- * Validation Schema
- */
-const createPollSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
 
-  description: z.string(),
-
-  nominees: z
-    .array(
-      z.object({
-        value: z.string().trim().min(1, "Nominee name is required"),
-      }),
-    )
-    .min(2, "Minimum 2 nominees required")
-    .max(5, "Maximum 5 nominees allowed"),
-});
-
-type CreatePollFormData = z.infer<typeof createPollSchema>;
 
 const CreatePoll = () => {
   const navigate = useNavigate();
